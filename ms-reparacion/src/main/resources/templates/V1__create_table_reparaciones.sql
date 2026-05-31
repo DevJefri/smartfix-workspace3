@@ -1,0 +1,7 @@
+CREATE TABLE IF NOT EXISTS reparaciones (
+    id BIGSERIAL PRIMARY KEY,
+    rut_cliente VARCHAR(20) NOT NULL,
+    modelo VARCHAR(100) NOT NULL,
+    descripcion TEXT NOT NULL,
+    estado VARCHAR(30) NOT NULL DEFAULT 'RECIBIDO'
+);

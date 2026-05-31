@@ -1,0 +1,97 @@
+version: "3.9"
+
+services:
+
+  # ── PostgreSQL para ms-cliente ────────────────────────────────────────────
+  db-cliente:
+    image: postgres:16-alpine
+    container_name: db_smartfix_clientes
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: db_smartfix_clientes
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata_clientes:/var/lib/postgresql/data
+    networks:
+      - smartfix-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d db_smartfix_clientes"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── PostgreSQL para ms-reparacion ─────────────────────────────────────────
+  db-reparacion:
+    image: postgres:16-alpine
+    container_name: db_smartfix_reparaciones
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: db_smartfix_reparaciones
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata_reparaciones:/var/lib/postgresql/data
+    networks:
+      - smartfix-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d db_smartfix_reparaciones"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Microservicio clientes ────────────────────────────────────────────────
+  ms-cliente:
+    build:
+      context: ./ms-cliente
+      dockerfile: Dockerfile
+    container_name: ms_cliente
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db-cliente:5432/db_smartfix_clientes
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      JWT_SECRET: smartfix-secret-key-256-bits-minimo-para-hs256-aqui
+      JWT_EXPIRATION_MS: "3600000"
+    depends_on:
+      db-cliente:
+        condition: service_healthy
+    networks:
+      - smartfix-net
+
+  # ── Microservicio reparaciones ────────────────────────────────────────────
+  ms-reparacion:
+    build:
+      context: ./ms-reparacion
+      dockerfile: Dockerfile
+    container_name: ms_reparacion
+    restart: unless-stopped
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db-reparacion:5432/db_smartfix_reparaciones
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      JWT_SECRET: smartfix-secret-key-256-bits-minimo-para-hs256-aqui
+      SERVICES_CLIENTE_URL: http://ms-cliente:8081
+    depends_on:
+      db-reparacion:
+        condition: service_healthy
+      ms-cliente:
+        condition: service_started
+    networks:
+      - smartfix-net
+
+volumes:
+  pgdata_clientes:
+  pgdata_reparaciones:
+
+networks:
+  smartfix-net:
+    driver: bridge
