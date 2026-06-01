@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 # SmartFix — Sistema de Gestión de Reparaciones de Celulares
 
 ---
